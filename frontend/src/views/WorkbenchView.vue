@@ -60,6 +60,15 @@
             >
               {{ action }}
             </button>
+            <button
+              v-if="meta.key === 'schema_evolution'"
+              class="link"
+              type="button"
+              :data-testid="`rollback-${row.id}`"
+              @click="openRollback(row)"
+            >
+              回滚候选
+            </button>
           </td>
         </tr>
         <tr v-if="!rows.length">
@@ -86,6 +95,12 @@
       </form>
     </div>
 
+    <SchemaRollbackPanel
+      v-if="rollbackEntryId !== null"
+      :entry-id="rollbackEntryId"
+      @close="closeRollback"
+    />
+
     <footer class="page-foot">
       <span>共 {{ total }} 条{{ meta.name }}记录</span>
       <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
@@ -104,6 +119,7 @@ import {
   runAction as applyAction,
 } from '@/api/backend-service'
 import type { EntryRow } from '@/data/types'
+import SchemaRollbackPanel from '@/views/SchemaRollbackPanel.vue'
 
 const props = defineProps<{ moduleKey: string }>()
 const meta = moduleMeta(props.moduleKey)
@@ -115,6 +131,7 @@ const filterFields = meta.fields.slice(0, 3)
 const showCreate = ref(false)
 const creating = ref(false)
 const createValues = ref<Record<string, string>>({})
+const rollbackEntryId = ref<number | null>(null)
 const stats = computed(() => [
   { label: meta.metrics[0], value: total.value },
   { label: meta.metrics[1], value: rows.value.filter((row) => row.status === meta.statuses[1]).length },
@@ -174,6 +191,16 @@ async function runAction(action: string, row: EntryRow) {
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '操作失败'
   }
+}
+
+function openRollback(row: EntryRow) {
+  errorMessage.value = ''
+  rollbackEntryId.value = Number(row.id)
+}
+
+async function closeRollback() {
+  rollbackEntryId.value = null
+  await reload()
 }
 
 async function reload() {

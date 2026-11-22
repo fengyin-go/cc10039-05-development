@@ -79,5 +79,18 @@ npm run dev
 - 列表接口统一返回 `{ items, total, page, size }`，动作接口统一返回 `{ ok, message }`。
 - 状态流转只允许在 `app/services` 里改，路由层不做业务判断。
 
+## Schema 回滚候选视图
+
+Schema演进模块支持按字段回滚，路由在 `backend/app/routers/schema_rollback.py`：
+
+- `GET /api/schema_evolution/{id}/rollback-candidates` 回滚候选视图：只纳入本表
+  可用快照，展示待恢复列的名称和类型差异、后续加上的列及其下游依赖。
+- `POST /api/schema_evolution/{id}/rollback-material` 交付恢复材料：按范围
+  （`仅待恢复列`/`整版列`）圈定本次允许恢复的列；整版列含后续加上的列时，
+  需先核对下游依赖（`deps_confirmed`）。
+- `POST /api/schema_evolution/{id}/rollback` 目标字段回滚：读取交付的字段定义
+  恢复对应列，回执写回实际读取的快照版本和字段定义；版本号与列定义不一致的
+  材料会被拒绝，不允许拼接不同版本的信息。
+
 领域：数据工程
 子方向：数仓与数据湖
